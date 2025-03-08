@@ -1,6 +1,6 @@
 # services/order-service/src/config.py
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Dict, Any
 
 
@@ -43,34 +43,27 @@ class ApiConfig:
 
 @dataclass
 class AppConfig:
-    service_name: str = "order-service"
     postgresql: PostgresConfig
     pulsar: PulsarConfig
-    api: ApiConfig
+    api: ApiConfig = field(default_factory=lambda: ApiConfig())
+    service_name: str = "order-service"
 
 
 def load_config() -> AppConfig:
     """Load application configuration from environment variables"""
     return AppConfig(
-        service_name=os.getenv("SERVICE_NAME", "order-service"),
         postgresql=PostgresConfig(
             host=os.getenv("POSTGRES_HOST", "localhost"),
             port=int(os.getenv("POSTGRES_PORT", "5432")),
             user=os.getenv("POSTGRES_USER", "postgres"),
             password=os.getenv("POSTGRES_PASSWORD", "postgres"),
             database=os.getenv("POSTGRES_DB", "orders"),
-            min_size=int(os.getenv("POSTGRES_MIN_CONNECTIONS", "5")),
-            max_size=int(os.getenv("POSTGRES_MAX_CONNECTIONS", "10")),
         ),
         pulsar=PulsarConfig(
             host=os.getenv("PULSAR_HOST", "localhost"),
             port=int(os.getenv("PULSAR_PORT", "6650")),
             admin_port=int(os.getenv("PULSAR_ADMIN_PORT", "8080")),
         ),
-        api=ApiConfig(
-            host=os.getenv("API_HOST", "0.0.0.0"),
-            port=int(os.getenv("API_PORT", "8000")),
-            debug=os.getenv("API_DEBUG", "False").lower() == "true",
-        ),
+        service_name=os.getenv("SERVICE_NAME", "order-service"),
     )
-
+    
