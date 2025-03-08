@@ -1,0 +1,90 @@
+# k8s/order-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: order-service
+  namespace: microservices
+spec:
+  selector:
+    app: order-service
+  ports:
+  - port: 8000
+    targetPort: 8000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-service
+  namespace: microservices
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: order-service
+  template:
+    metadata:
+      labels:
+        app: order-service
+    spec:
+      containers:
+      - name: order-service
+        image: order-management-system/order-service:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8000
+        env:
+        - name: POSTGRES_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: microservices-config
+              key: POSTGRES_HOST
+        - name: POSTGRES_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: microservices-config
+              key: POSTGRES_PORT
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: microservices-secrets
+              key: POSTGRES_USER
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: microservices-secrets
+              key: POSTGRES_PASSWORD
+        - name: POSTGRES_DB
+          valueFrom:
+            configMapKeyRef:
+              name: microservices-config
+              key: POSTGRES_DB_ORDERS
+        - name: PULSAR_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: microservices-config
+              key: PULSAR_HOST
+        - name: PULSAR_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: microservices-config
+              key: PULSAR_PORT
+        - name: PULSAR_ADMIN_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: microservices-config
+              key: PULSAR_ADMIN_PORT
+        - name: SERVICE_NAME
+          value: "order-service"
+        readinessProbe:
+          httpGet:
+            path: /api/health
+            port: 8000
+          initialDelaySeconds: 15
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /api/health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 30
+

@@ -1,0 +1,119 @@
+# docker-compose.yml
+version: '3.8'
+
+services:
+  api-gateway:
+    build:
+      context: ./api-gateway
+    ports:
+      - "8080:8000"
+    environment:
+      - ORDER_SERVICE_URL=http://order-service:8000
+      - INVENTORY_SERVICE_URL=http://inventory-service:8000
+      - PAYMENT_SERVICE_URL=http://payment-service:8000
+    depends_on:
+      - order-service
+      - inventory-service
+      - payment-service
+    networks:
+      - microservices-net
+
+  order-service:
+    build:
+      context: ./services/order-service
+    ports:
+      - "8001:8000"
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=orders
+      - PULSAR_HOST=pulsar
+      - PULSAR_PORT=6650
+      - PULSAR_ADMIN_PORT=8080
+      - SERVICE_NAME=order-service
+    depends_on:
+      - postgres
+      - pulsar
+    networks:
+      - microservices-net
+
+  inventory-service:
+    build:
+      context: ./services/inventory-service
+    ports:
+      - "8002:8000"
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=inventory
+      - PULSAR_HOST=pulsar
+      - PULSAR_PORT=6650
+      - PULSAR_ADMIN_PORT=8080
+      - SERVICE_NAME=inventory-service
+    depends_on:
+      - postgres
+      - pulsar
+    networks:
+      - microservices-net
+
+  payment-service:
+    build:
+      context: ./services/payment-service
+    ports:
+      - "8003:8000"
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=payments
+      - PULSAR_HOST=pulsar
+      - PULSAR_PORT=6650
+      - PULSAR_ADMIN_PORT=8080
+      - SERVICE_NAME=payment-service
+    depends_on:
+      - postgres
+      - pulsar
+    networks:
+      - microservices-net
+
+  postgres:
+    image: postgres:15-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_MULTIPLE_DATABASES=orders,inventory,payments
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infrastructure/postgres/init-multiple-dbs.sh:/docker-entrypoint-initdb.d/init-multiple-dbs.sh
+    networks:
+      - microservices-net
+
+  pulsar:
+    image: apachepulsar/pulsar:3.1.0
+    ports:
+      - "6650:6650"
+      - "8080:8080"
+    environment:
+      - PULSAR_MEM=-Xms512m -Xmx512m -XX:MaxDirectMemorySize=256m
+    command: >
+      /bin/bash -c "bin/apply-config-from-env.py conf/standalone.conf &&
+      bin/pulsar standalone"
+    volumes:
+      - pulsar_data:/pulsar/data
+    networks:
+      - microservices-net
+
+networks:
+  microservices-net:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  pulsar_data:

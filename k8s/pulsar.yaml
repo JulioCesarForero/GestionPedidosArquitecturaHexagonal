@@ -1,0 +1,63 @@
+# k8s/pulsar.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: pulsar
+  namespace: microservices
+  labels:
+    app: pulsar
+spec:
+  ports:
+  - name: pulsar
+    port: 6650
+    targetPort: 6650
+  - name: admin
+    port: 8080
+    targetPort: 8080
+  selector:
+    app: pulsar
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: pulsar
+  namespace: microservices
+spec:
+  serviceName: pulsar
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pulsar
+  template:
+    metadata:
+      labels:
+        app: pulsar
+    spec:
+      containers:
+      - name: pulsar
+        image: apachepulsar/pulsar:3.1.0
+        command: ["sh", "-c", "bin/apply-config-from-env.py conf/standalone.conf && bin/pulsar standalone"]
+        ports:
+        - containerPort: 6650
+          name: pulsar
+        - containerPort: 8080
+          name: admin
+        env:
+        - name: PULSAR_MEM
+          value: "-Xms512m -Xmx512m -XX:MaxDirectMemorySize=256m"
+        volumeMounts:
+        - name: pulsar-data
+          mountPath: /pulsar/data
+      initContainers:
+      - name: init-pulsar
+        image: busybox:1.28
+        command: ['sh', '-c', 'echo Waiting for pulsar to be ready && sleep 10']
+  volumeClaimTemplates:
+  - metadata:
+      name: pulsar-data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 10Gi
+
