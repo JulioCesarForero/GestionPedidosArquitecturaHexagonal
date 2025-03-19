@@ -7,9 +7,9 @@ app = FastAPI()
 
 # Configuración de URLs de servicios
 services = {
-    "orders": "http://order-service:8000",
-    "inventory": "http://inventory-service:8000",
-    "payments": "http://payment-service:8000"
+    "orders": "http://order-service:8001",
+    "inventory": "http://inventory-service:8002",
+    "payments": "http://payment-service:8003"
 }
 
 @app.get("/")
